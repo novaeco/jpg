@@ -1,6 +1,7 @@
 #include "gallery.h"
 #include <dirent.h>
 #include <sys/stat.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -57,6 +58,9 @@ static bool has_jpg_extension(const char *name)
     return strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0;
 }
 
+static void gallery_reset_entries(void);
+static void gallery_verify_empty_state(const char *context);
+
 static esp_err_t gallery_scan_directory(const char *path)
 {
     DIR *dir = opendir(path);
@@ -84,6 +88,8 @@ static esp_err_t gallery_scan_directory(const char *path)
             gallery_entry_t *tmp = realloc(s_entries, capacity * sizeof(gallery_entry_t));
             if (!tmp) {
                 closedir(dir);
+                gallery_reset_entries();
+                gallery_verify_empty_state("directory scan realloc failure");
                 return ESP_ERR_NO_MEM;
             }
             s_entries = tmp;
@@ -95,6 +101,8 @@ static esp_err_t gallery_scan_directory(const char *path)
         item->path = strdup(full_path);
         if (!item->path) {
             closedir(dir);
+            gallery_reset_entries();
+            gallery_verify_empty_state("directory scan strdup failure");
             return ESP_ERR_NO_MEM;
         }
         struct stat st = {0};
@@ -263,6 +271,8 @@ esp_err_t gallery_start(const gallery_config_t *config)
     esp_err_t err = gallery_scan_directory(s_config.root_path);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "No images found in %s", s_config.root_path);
+        gallery_reset_entries();
+        gallery_verify_empty_state("directory scan failure");
         return err;
     }
 
@@ -270,6 +280,8 @@ esp_err_t gallery_start(const gallery_config_t *config)
 
     s_cmd_queue = xQueueCreate(GALLERY_QUEUE_DEPTH, sizeof(gallery_cmd_t));
     if (!s_cmd_queue) {
+        gallery_reset_entries();
+        gallery_verify_empty_state("queue create failure");
         return ESP_ERR_NO_MEM;
     }
     s_running = true;
@@ -277,6 +289,8 @@ esp_err_t gallery_start(const gallery_config_t *config)
         s_running = false;
         vQueueDelete(s_cmd_queue);
         s_cmd_queue = NULL;
+        gallery_reset_entries();
+        gallery_verify_empty_state("task create failure");
         return ESP_ERR_NO_MEM;
     }
 
@@ -304,6 +318,42 @@ esp_err_t gallery_start(const gallery_config_t *config)
     return ESP_OK;
 }
 
+static void gallery_reset_entries(void)
+{
+    if (s_entries) {
+        for (size_t i = 0; i < s_entry_count; ++i) {
+            free(s_entries[i].path);
+            s_entries[i].path = NULL;
+            if (s_entries[i].thumb_valid) {
+                jpeg_image_release(&s_entries[i].thumb);
+                s_entries[i].thumb_valid = false;
+            }
+        }
+        free(s_entries);
+        s_entries = NULL;
+    }
+
+    s_entry_count = 0;
+    s_current = 0;
+    s_refresh_cursor = 0;
+    s_pending_thumbs = 0;
+}
+
+static void gallery_verify_empty_state(const char *context)
+{
+    size_t count = gallery_image_count();
+    const char *path0 = gallery_image_path(0);
+
+    if (count != 0 || path0 != NULL) {
+        ESP_LOGE(TAG, "Gallery state inconsistent after %s (count=%zu, path0=%s)",
+                 context ? context : "unknown", count, path0 ? path0 : "<non-null>");
+        assert(count == 0);
+        assert(path0 == NULL);
+    } else if (context) {
+        ESP_LOGD(TAG, "Gallery state cleared after %s", context);
+    }
+}
+
 void gallery_stop(void)
 {
     if (!s_running) {
@@ -324,18 +374,7 @@ void gallery_stop(void)
         vQueueDelete(s_cmd_queue);
         s_cmd_queue = NULL;
     }
-    for (size_t i = 0; i < s_entry_count; ++i) {
-        free(s_entries[i].path);
-        if (s_entries[i].thumb_valid) {
-            jpeg_image_release(&s_entries[i].thumb);
-        }
-        s_entries[i].thumb_valid = false;
-    }
-    free(s_entries);
-    s_entries = NULL;
-    s_entry_count = 0;
-    s_pending_thumbs = 0;
-    s_refresh_cursor = 0;
+    gallery_reset_entries();
     s_running = false;
     s_slideshow_enabled = false;
 }

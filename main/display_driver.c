@@ -32,16 +32,26 @@ static void backlight_timer_cb(void *arg)
     display_driver_ctx_t *ctx = (display_driver_ctx_t *)arg;
     const uint8_t duty = ctx->backlight_percent;
     if (duty >= 100) {
-        ch422_set_pin_level(ctx->expander, CH422_PIN_BACKLIGHT, true);
+        esp_err_t err = ch422_set_pin_level(ctx->expander, CH422_PIN_BACKLIGHT, true);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Backlight timer failed to force high: %s", esp_err_to_name(err));
+        }
         return;
     }
     if (duty == 0) {
-        ch422_set_pin_level(ctx->expander, CH422_PIN_BACKLIGHT, false);
+        esp_err_t err = ch422_set_pin_level(ctx->expander, CH422_PIN_BACKLIGHT, false);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Backlight timer failed to force low: %s", esp_err_to_name(err));
+        }
         return;
     }
     ctx->pwm_counter = (ctx->pwm_counter + 1) % 100;
     bool level = ctx->pwm_counter < duty;
-    ch422_set_pin_level(ctx->expander, CH422_PIN_BACKLIGHT, level);
+    esp_err_t err = ch422_set_pin_level(ctx->expander, CH422_PIN_BACKLIGHT, level);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Backlight timer failed to update PWM: %s", esp_err_to_name(err));
+        return;
+    }
 }
 
 static esp_err_t init_backlight_pwm(display_driver_ctx_t *ctx)
@@ -201,13 +211,18 @@ esp_err_t display_driver_init(display_driver_handles_t *out_handles)
     };
     ESP_RETURN_ON_ERROR(ch422_init(&ch_cfg, &s_ctx.expander), TAG, "CH422 init failed");
 
-    ch422_set_pin_level(s_ctx.expander, CH422_PIN_LCD_VDD_EN, true);
+    ESP_LOGI(TAG, "Enabling LCD power rail (CH422_PIN_LCD_VDD_EN)");
+    ESP_RETURN_ON_ERROR(ch422_set_pin_level(s_ctx.expander, CH422_PIN_LCD_VDD_EN, true), TAG, "Failed to enable LCD power");
     vTaskDelay(pdMS_TO_TICKS(10));
-    ch422_pulse(s_ctx.expander, CH422_PIN_LCD_RESET, 1000, 5000);
-    ch422_pulse(s_ctx.expander, CH422_PIN_TOUCH_RESET, 2000, 2000);
-    ch422_set_pin_level(s_ctx.expander, CH422_PIN_USB_CAN_SEL, APP_USB_SEL_ACTIVE_USB);
-    ch422_set_pin_level(s_ctx.expander, CH422_PIN_SD_CS, true);
-    ch422_set_pin_level(s_ctx.expander, CH422_PIN_BACKLIGHT, false);
+    ESP_LOGI(TAG, "Resetting LCD panel via CH422 pulse (low=1000us, high=5000us)");
+    ESP_RETURN_ON_ERROR(ch422_pulse(s_ctx.expander, CH422_PIN_LCD_RESET, 1000, 5000), TAG, "LCD reset pulse failed");
+    ESP_LOGI(TAG, "Resetting touch controller via CH422 pulse (low=2000us, high=2000us)");
+    ESP_RETURN_ON_ERROR(ch422_pulse(s_ctx.expander, CH422_PIN_TOUCH_RESET, 2000, 2000), TAG, "Touch reset pulse failed");
+    ESP_LOGI(TAG, "Selecting USB interface on CH422 (PIN_USB_CAN_SEL level=%d)", APP_USB_SEL_ACTIVE_USB);
+    ESP_RETURN_ON_ERROR(ch422_set_pin_level(s_ctx.expander, CH422_PIN_USB_CAN_SEL, APP_USB_SEL_ACTIVE_USB), TAG, "USB/CAN selection failed");
+    ESP_LOGI(TAG, "Driving SD card CS high via CH422 to deselect the card");
+    ESP_RETURN_ON_ERROR(ch422_set_pin_level(s_ctx.expander, CH422_PIN_SD_CS, true), TAG, "Failed to set SD CS high");
+    ESP_RETURN_ON_ERROR(ch422_set_pin_level(s_ctx.expander, CH422_PIN_BACKLIGHT, false), TAG, "Failed to disable backlight");
 
     ESP_RETURN_ON_ERROR(init_lvgl(&s_ctx), TAG, "LVGL setup failed");
     ESP_RETURN_ON_ERROR(init_touch(&s_ctx), TAG, "Touch setup failed");

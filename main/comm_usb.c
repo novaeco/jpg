@@ -1,5 +1,6 @@
 #include "comm_usb.h"
 #include <string.h>
+#include "esp_err.h"
 #include "esp_log.h"
 #include "tinyusb.h"
 #include "tusb_cdc_acm.h"
@@ -43,7 +44,11 @@ esp_err_t comm_usb_init(comm_usb_rx_cb_t rx_cb, void *ctx)
     };
     ESP_RETURN_ON_ERROR(tinyusb_driver_install(&tusb_cfg), TAG, "tinyusb install failed");
 
-    tinyusb_cdcacm_register_callback(s_cdc_itf, CDCACM_EVENT_RX, cdc_rx_callback);
+    esp_err_t ret = tinyusb_cdcacm_register_callback(s_cdc_itf, CDCACM_EVENT_RX, cdc_rx_callback);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register CDC RX callback: %s", esp_err_to_name(ret));
+    }
+    ESP_RETURN_ON_ERROR(ret, TAG, "cdc cb failed");
     tinyusb_cdcacm_init_config_t cdc_cfg = {
         .usb_dev = TINYUSB_USBDEV_0,
         .cdc_port = s_cdc_itf,

@@ -1,4 +1,5 @@
 #include "app_config.h"
+#include "esp_heap_caps.h"
 
 static const app_display_pin_config_t s_display_pins = {
     .hsync = GPIO_NUM_46,
@@ -71,4 +72,16 @@ const i2c_config_t *app_config_i2c(void)
 const spi_bus_config_t *app_config_sd_spi_bus(void)
 {
     return &s_sd_spi_bus_cfg;
+}
+
+void *app_lvgl_psram_alloc(size_t size)
+{
+    if (size == 0) {
+        return NULL;
+    }
+    return heap_caps_malloc_prefer(
+        size,
+        2,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT,
+        MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
 }

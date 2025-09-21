@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "driver/spi_common.h"
@@ -81,6 +82,7 @@ const app_display_pin_config_t *app_config_display_pins(void);
 const app_ch422_pin_config_t *app_config_expander_pins(void);
 const i2c_config_t *app_config_i2c(void);
 const spi_bus_config_t *app_config_sd_spi_bus(void);
+void *app_lvgl_psram_alloc(size_t size);
 
 #ifdef __cplusplus
 }

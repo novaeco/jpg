@@ -14,8 +14,21 @@
 #include "esp_heap_caps.h"
 #include "driver/gpio.h"
 #include "driver/sdmmc_defs.h"
+#if defined(__has_include)
+#if __has_include("esp_private/sdspi_private.h")
+#include "esp_private/sdspi_private.h"
+#else
+#include "sdspi_private.h"
+#endif
+#if __has_include("esp_private/sdspi_crc.h")
+#include "esp_private/sdspi_crc.h"
+#else
+#include "sdspi_crc.h"
+#endif
+#else
 #include "sdspi_private.h"
 #include "sdspi_crc.h"
+#endif
 #include "ch422_driver.h"
 #include "sdspi_ch422_host.h"
 #include "esp_timer.h"

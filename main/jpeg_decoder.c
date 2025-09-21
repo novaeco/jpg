@@ -24,7 +24,7 @@ static size_t tj_input(JDEC *jd, uint8_t *buf, size_t len)
     return len;
 }
 
-static uint32_t tj_output(JDEC *jd, void *bitmap, JRECT *rect)
+static int tj_output(JDEC *jd, void *bitmap, JRECT *rect)
 {
     jpeg_decoder_ctx_t *ctx = (jpeg_decoder_ctx_t *)jd->device;
     jpeg_image_t *img = ctx->image;

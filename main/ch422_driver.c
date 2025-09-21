@@ -1,9 +1,10 @@
 #include "ch422_driver.h"
 #include <string.h>
+#include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
-#include "esp_rom/ets_sys.h"
+#include "esp_rom_sys.h"
 
 #define CH422_ADDR_SYSCTRL   (0x48 >> 1)
 #define CH422_ADDR_IO0       (0x70 >> 1)
@@ -133,14 +134,14 @@ esp_err_t ch422_pulse(ch422_handle_t *handle, ch422_pin_t pin, uint32_t low_dela
         return err;
     }
     if (low_delay_us) {
-        ets_delay_us(low_delay_us);
+        esp_rom_delay_us(low_delay_us);
     }
     err = ch422_set_pin_level(handle, pin, true);
     if (err != ESP_OK) {
         return err;
     }
     if (high_delay_us) {
-        ets_delay_us(high_delay_us);
+        esp_rom_delay_us(high_delay_us);
     }
     return ESP_OK;
 }

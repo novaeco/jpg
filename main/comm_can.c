@@ -39,11 +39,13 @@ esp_err_t comm_can_start(const comm_can_config_t *config)
     g_cfg.tx_queue_len = 10;
     g_cfg.rx_queue_len = 10;
 
-    twai_timing_config_t t_cfg = TWAI_TIMING_CONFIG_500KBITS();
+    twai_timing_config_t t_cfg;
     if (s_config.bitrate == 250000) {
-        t_cfg = TWAI_TIMING_CONFIG_250KBITS();
+        t_cfg = (twai_timing_config_t)TWAI_TIMING_CONFIG_250KBITS();
     } else if (s_config.bitrate == 125000) {
-        t_cfg = TWAI_TIMING_CONFIG_125KBITS();
+        t_cfg = (twai_timing_config_t)TWAI_TIMING_CONFIG_125KBITS();
+    } else {
+        t_cfg = (twai_timing_config_t)TWAI_TIMING_CONFIG_500KBITS();
     }
 
     twai_filter_config_t f_cfg = TWAI_FILTER_CONFIG_ACCEPT_ALL();

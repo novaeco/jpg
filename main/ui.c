@@ -1,6 +1,7 @@
 #include "ui.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
 #include "esp_check.h"
@@ -29,6 +30,27 @@ typedef struct {
 
 static const char *TAG = "ui";
 static ui_context_t s_ui = {0};
+
+static lv_image_dsc_t ui_build_rgb565_image_dsc(const jpeg_image_t *image)
+{
+    lv_image_dsc_t dsc = {0};
+    if (!image || !image->pixels) {
+        return dsc;
+    }
+    uint32_t stride_bytes = (uint32_t)image->stride * sizeof(uint16_t);
+    dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    dsc.header.flags = 0;
+    dsc.header.w = image->width;
+    dsc.header.h = image->height;
+    dsc.header.stride = stride_bytes;
+    dsc.header.reserved_2 = 0;
+    dsc.data_size = (uint32_t)image->buffer_size;
+    dsc.data = (const uint8_t *)image->pixels;
+    dsc.reserved = NULL;
+    dsc.reserved_2 = NULL;
+    return dsc;
+}
 
 static void ui_show_screen(lv_obj_t *screen)
 {
@@ -358,32 +380,14 @@ void ui_handle_gallery_event(const gallery_event_t *event)
             memset(&s_ui.current_image_dsc, 0, sizeof(s_ui.current_image_dsc));
         }
         s_ui.current_image = event->image;
-        s_ui.current_image_dsc = (lv_image_dsc_t) {
-            .header = {
-                .always_zero = 0,
-                .w = s_ui.current_image.width,
-                .h = s_ui.current_image.height,
-                .cf = LV_COLOR_FORMAT_RGB565,
-            },
-            .data = s_ui.current_image.pixels,
-            .data_size = s_ui.current_image.buffer_size,
-        };
+        s_ui.current_image_dsc = ui_build_rgb565_image_dsc(&s_ui.current_image);
         lv_image_set_src(s_ui.viewer_image, &s_ui.current_image_dsc);
         ui_show_screen(s_ui.viewer_screen);
         break;
     case GALLERY_EVENT_THUMBNAIL_READY:
         if (event->index < s_ui.thumb_count && s_ui.thumbnail_imgs && s_ui.thumbnail_dscs) {
             lv_image_dsc_t *dsc = &s_ui.thumbnail_dscs[event->index];
-            *dsc = (lv_image_dsc_t) {
-                .header = {
-                    .always_zero = 0,
-                    .w = event->image.width,
-                    .h = event->image.height,
-                    .cf = LV_COLOR_FORMAT_RGB565,
-                },
-                .data = event->image.pixels,
-                .data_size = event->image.buffer_size,
-            };
+            *dsc = ui_build_rgb565_image_dsc(&event->image);
             lv_image_set_src(s_ui.thumbnail_imgs[event->index], dsc);
         }
         break;

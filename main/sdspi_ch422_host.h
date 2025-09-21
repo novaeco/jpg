@@ -9,7 +9,15 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "esp_err.h"
+#if defined(__has_include)
+#if __has_include("driver/sdmmc_types.h")
+#include "driver/sdmmc_types.h"
+#else
 #include "sdmmc_types.h"
+#endif
+#else
+#include "sdmmc_types.h"
+#endif
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "driver/sdspi_host.h"

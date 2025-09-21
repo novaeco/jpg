@@ -54,7 +54,11 @@ if(TARGET ${lvgl_lib} AND TARGET ${fatfs_lib})
         ${lvgl_lib}
         PUBLIC
             LV_USE_FS_FATFS=1
-            LV_FS_FATFS_LETTER='0'
+            # LVGL 9.x requires the FATFS drive letter to be an uppercase
+            # alphabetic character.  The legacy configuration used the ASCII
+            # digit '0', which now triggers a compile-time error.  Use 'S' to
+            # reflect the SD-Card volume that we mount at /sdcard.
+            LV_FS_FATFS_LETTER='S'
             LV_FS_FATFS_PATH="/sdcard"
     )
 endif()

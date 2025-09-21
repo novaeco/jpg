@@ -28,7 +28,7 @@ idf_component_register(
         esp_pm
         esp_psram
         nvs_flash
-        tinyusb
+        esp_tinyusb
         usb
         esp_system
         esp_netif

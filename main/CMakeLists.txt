@@ -1,3 +1,35 @@
+set(main_requires
+    driver
+    esp_event
+    esp_lcd
+    esp_lvgl_port
+    lvgl
+    esp_lcd_touch
+    esp_lcd_touch_gt911
+    fatfs
+    sdmmc
+    esp_timer
+    esp_pm
+    esp_psram
+    nvs_flash
+    esp_tinyusb
+    usb
+    esp_system
+    esp_netif
+    tjpgd
+)
+
+set(main_priv_include_dirs "")
+
+idf_build_get_property(idf_version IDF_VERSION)
+if(idf_version VERSION_GREATER_EQUAL "5.5.0")
+    list(APPEND main_requires esp_driver_sdspi)
+    set(sdspi_private_dir "$ENV{IDF_PATH}/components/esp_driver_sdspi/src")
+    if(EXISTS "${sdspi_private_dir}/sdspi_private.h")
+        list(APPEND main_priv_include_dirs "${sdspi_private_dir}")
+    endif()
+endif()
+
 idf_component_register(
     SRCS
         "main.c"
@@ -15,25 +47,12 @@ idf_component_register(
     INCLUDE_DIRS
         "."
     REQUIRES
-        driver
-        esp_event
-        esp_lcd
-        esp_lvgl_port
-        lvgl
-        esp_lcd_touch
-        esp_lcd_touch_gt911
-        fatfs
-        sdmmc
-        esp_timer
-        esp_pm
-        esp_psram
-        nvs_flash
-        esp_tinyusb
-        usb
-        esp_system
-        esp_netif
-        tjpgd
+        ${main_requires}
 )
+
+if(main_priv_include_dirs)
+    target_include_directories(${COMPONENT_LIB} PRIVATE ${main_priv_include_dirs})
+endif()
 
 # Workaround for ESP-IDF v5.5 LVGL component missing the FATFS dependency
 # declaration. Without this adjustment, lv_fs_fatfs.c fails to compile because

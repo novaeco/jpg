@@ -3,14 +3,41 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_idf_version.h"
 #include "sdkconfig.h"
 #include "tinyusb.h"
 #include "tusb_cdc_acm.h"
+#if defined(__has_include)
+#if __has_include("tinyusb_cdcacm.h")
+#include "tinyusb_cdcacm.h"
+#endif
+#endif
 
 static const char *TAG = "usb";
 static comm_usb_rx_cb_t s_rx_cb = NULL;
 static void *s_rx_ctx = NULL;
 static tinyusb_cdcacm_itf_t s_cdc_itf = TINYUSB_CDC_ACM_0;
+
+static inline esp_err_t comm_usb_write_queue_internal(tinyusb_cdcacm_itf_t itf,
+                                                      const uint8_t *data,
+                                                      size_t len)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+    return tinyusb_cdcacm_write_queue(itf, data, len);
+#else
+    return tusb_cdc_acm_write_queue(itf, data, len);
+#endif
+}
+
+static inline esp_err_t comm_usb_write_flush_internal(tinyusb_cdcacm_itf_t itf,
+                                                      uint32_t timeout_ticks)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+    return tinyusb_cdcacm_write_flush(itf, timeout_ticks);
+#else
+    return tusb_cdc_acm_write_flush(itf, timeout_ticks);
+#endif
+}
 
 #ifndef CONFIG_TINYUSB_CDC_RX_BUFSIZE
 #define CONFIG_TINYUSB_CDC_RX_BUFSIZE 64
@@ -79,10 +106,10 @@ esp_err_t comm_usb_write(const uint8_t *data, size_t len)
     if (!data || !len) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (tusb_cdc_acm_write_queue(s_cdc_itf, data, len) != ESP_OK) {
+    if (comm_usb_write_queue_internal(s_cdc_itf, data, len) != ESP_OK) {
         return ESP_FAIL;
     }
-    return tusb_cdc_acm_write_flush(s_cdc_itf, 0);
+    return comm_usb_write_flush_internal(s_cdc_itf, 0);
 }
 
 esp_err_t comm_usb_write_line(const char *line)

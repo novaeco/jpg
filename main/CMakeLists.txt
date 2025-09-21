@@ -1,0 +1,37 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "app_config.c"
+        "ch422_driver.c"
+        "display_driver.c"
+        "sdspi_ch422_host.c"
+        "sd_card.c"
+        "jpeg_decoder.c"
+        "gallery.c"
+        "ui.c"
+        "comm_can.c"
+        "comm_rs485.c"
+        "comm_usb.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        driver
+        esp_event
+        esp_lcd
+        esp_lvgl_port
+        lvgl
+        LovyanGFX
+        esp_lcd_touch
+        esp_lcd_touch_gt911
+        fatfs
+        sdmmc
+        esp_timer
+        esp_pm
+        esp_psram
+        nvs_flash
+        tinyusb
+        usb
+        esp_system
+        esp_netif
+        tjpgd
+)

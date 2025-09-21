@@ -36,12 +36,18 @@ idf_component_register(
 )
 
 # Workaround for ESP-IDF v5.5 LVGL component missing the FATFS dependency
-# declaration. Without this adjustment, lv_fs_fatfs.c fails to compile due to
-# the ff.h header not being discoverable when the LVGL component is built.
-# Inject the dependency link here until the upstream component definition is
-# fixed.
+# declaration. Without this adjustment, lv_fs_fatfs.c fails to compile because
+# the ff.h header (exposed via the FATFS component interface) is not reachable
+# during compilation of the LVGL sources.  Explicitly stitch the dependency and
+# propagate the include directories here until the upstream definition is
+# corrected.
 idf_component_get_property(lvgl_lib lvgl COMPONENT_LIB)
 idf_component_get_property(fatfs_lib fatfs COMPONENT_LIB)
 if(TARGET ${lvgl_lib} AND TARGET ${fatfs_lib})
-    target_link_libraries(${lvgl_lib} PRIVATE ${fatfs_lib})
+    target_link_libraries(${lvgl_lib} PUBLIC ${fatfs_lib})
+    target_include_directories(
+        ${lvgl_lib}
+        PUBLIC
+        $<TARGET_PROPERTY:${fatfs_lib},INTERFACE_INCLUDE_DIRECTORIES>
+    )
 endif()

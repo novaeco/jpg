@@ -50,4 +50,11 @@ if(TARGET ${lvgl_lib} AND TARGET ${fatfs_lib})
         PUBLIC
         $<TARGET_PROPERTY:${fatfs_lib},INTERFACE_INCLUDE_DIRECTORIES>
     )
+    target_compile_definitions(
+        ${lvgl_lib}
+        PUBLIC
+            LV_USE_FS_FATFS=1
+            LV_FS_FATFS_LETTER='0'
+            LV_FS_FATFS_PATH="/sdcard"
+    )
 endif()

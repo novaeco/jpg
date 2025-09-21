@@ -111,7 +111,7 @@ esp_err_t jpeg_decode_file(const char *path, const jpeg_decode_options_t *option
     out_image->stride = stride;
     out_image->buffer_size = buffer_size;
 
-    res = jd_decomp(&decoder, tj_output, 0);
+    res = jd_decomp(&decoder, tj_output, scale);
     fclose(fp);
     if (res != JDR_OK) {
         ESP_LOGE("jpeg", "jd_decomp failed %d", res);

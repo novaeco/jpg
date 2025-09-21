@@ -3,6 +3,7 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "gallery.h"
 #include "app_config.h"
 

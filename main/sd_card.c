@@ -4,6 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "esp_vfs_fat.h"
 #include "driver/spi_common.h"
 #include "sdmmc_cmd.h"

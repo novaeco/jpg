@@ -1,5 +1,6 @@
 #include "comm_can.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "app_config.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

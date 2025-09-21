@@ -21,6 +21,44 @@ static const char *s_mount_point = "/sdcard";
 static ch422_handle_t *s_expander = NULL;
 static char *s_vfs_path_dup = NULL;
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+static size_t sdcard_resolve_allocation_unit_size(size_t sector_size, size_t requested_size)
+{
+    if (sector_size == 0) {
+        return requested_size;
+    }
+
+    size_t alloc_size = requested_size;
+    if (alloc_size == 0 || alloc_size < sector_size) {
+        alloc_size = sector_size;
+    }
+
+    if (alloc_size % sector_size) {
+        alloc_size = ((alloc_size + sector_size - 1) / sector_size) * sector_size;
+    }
+
+    size_t sectors_per_cluster = alloc_size / sector_size;
+    if (sectors_per_cluster == 0) {
+        sectors_per_cluster = 1;
+    }
+
+    if ((sectors_per_cluster & (sectors_per_cluster - 1)) != 0) {
+        size_t power_of_two = 1;
+        while (power_of_two < sectors_per_cluster) {
+            power_of_two <<= 1;
+        }
+        sectors_per_cluster = power_of_two;
+    }
+
+    const size_t max_sectors_per_cluster = 128;
+    if (sectors_per_cluster > max_sectors_per_cluster) {
+        sectors_per_cluster = max_sectors_per_cluster;
+    }
+
+    return sectors_per_cluster * sector_size;
+}
+#endif
+
 #define CHECK_EXECUTE_RESULT(err, str) do { \
     if ((err) != ESP_OK) { \
         ESP_LOGE(TAG, str " (0x%x).", err); \
@@ -86,9 +124,15 @@ static esp_err_t partition_card(const esp_vfs_fat_mount_config_t *mount_config,
         goto fail;
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+    size_t alloc_unit_size = sdcard_resolve_allocation_unit_size(
+        card->csd.sector_size,
+        mount_config->allocation_unit_size);
+#else
     size_t alloc_unit_size = esp_vfs_fat_get_allocation_unit_size(
         card->csd.sector_size,
         mount_config->allocation_unit_size);
+#endif
     ESP_LOGW(TAG, "formatting card, allocation unit size=%d", alloc_unit_size);
     const MKFS_PARM opt = {(BYTE)FM_ANY, 0, 0, 0, alloc_unit_size};
     res = f_mkfs(drv, &opt, workbuf, workbuf_size);

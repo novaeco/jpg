@@ -20,7 +20,6 @@ idf_component_register(
         esp_lcd
         esp_lvgl_port
         lvgl
-        LovyanGFX
         esp_lcd_touch
         esp_lcd_touch_gt911
         fatfs

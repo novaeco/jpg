@@ -90,7 +90,7 @@ void app_main(void)
         ESP_LOGE(TAG, "Gallery start failed: %s", esp_err_to_name(gallery_err));
     }
 
-    comm_usb_init(usb_rx_handler, NULL);
+    ESP_ERROR_CHECK(comm_usb_init(usb_rx_handler, NULL));
 
     comm_can_config_t can_cfg = {
         .bitrate = APP_CAN_DEFAULT_BAUDRATE,
@@ -98,7 +98,21 @@ void app_main(void)
         .user_ctx = NULL,
         .expander = display_driver_expander(),
     };
-    comm_can_start(&can_cfg);
+    esp_err_t can_err = comm_can_start(&can_cfg);
+    if (can_err != ESP_OK) {
+        ESP_LOGE(TAG, "CAN start failed: %s", esp_err_to_name(can_err));
+        ch422_handle_t *expander = display_driver_expander();
+        if (expander) {
+            esp_err_t restore_err = ch422_set_pin_level(expander, CH422_PIN_USB_CAN_SEL, APP_USB_SEL_ACTIVE_USB);
+            if (restore_err != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to restore USB selection on CH422: %s", esp_err_to_name(restore_err));
+            } else {
+                ESP_LOGW(TAG, "CAN interface disabled; CH422 reverted to USB mode for user access");
+            }
+        } else {
+            ESP_LOGW(TAG, "CH422 expander unavailable; unable to restore USB selection after CAN failure");
+        }
+    }
 
     comm_rs485_config_t rs_cfg = {
         .port = APP_RS485_UART_NUM,
@@ -108,7 +122,7 @@ void app_main(void)
         .baudrate = APP_RS485_DEFAULT_BAUDRATE,
         .buffer_size = 256,
     };
-    comm_rs485_init(&rs_cfg, rs485_rx_handler, NULL);
+    ESP_ERROR_CHECK(comm_rs485_init(&rs_cfg, rs485_rx_handler, NULL));
 
     ESP_LOGI(TAG, "System initialized. Images: %u", (unsigned)gallery_image_count());
 }

@@ -19,15 +19,9 @@ set(main_requires
     tjpgd
 )
 
-set(main_priv_include_dirs "")
-
 idf_build_get_property(idf_version IDF_VERSION)
 if(idf_version VERSION_GREATER_EQUAL "5.5.0")
     list(APPEND main_requires esp_driver_sdspi)
-    set(sdspi_private_dir "$ENV{IDF_PATH}/components/esp_driver_sdspi/src")
-    if(EXISTS "${sdspi_private_dir}/sdspi_private.h")
-        list(APPEND main_priv_include_dirs "${sdspi_private_dir}")
-    endif()
 endif()
 
 idf_component_register(
@@ -50,8 +44,15 @@ idf_component_register(
         ${main_requires}
 )
 
-if(main_priv_include_dirs)
-    target_include_directories(${COMPONENT_LIB} PRIVATE ${main_priv_include_dirs})
+if(idf_version VERSION_GREATER_EQUAL "5.5.0")
+    idf_component_get_property(sdspi_component_lib esp_driver_sdspi COMPONENT_LIB)
+    if(sdspi_component_lib AND TARGET ${sdspi_component_lib})
+        idf_component_get_property(sdspi_component_dir esp_driver_sdspi COMPONENT_DIR)
+        set(sdspi_private_dir "${sdspi_component_dir}/src")
+        if(EXISTS "${sdspi_private_dir}/sdspi_private.h")
+            target_include_directories(${COMPONENT_LIB} PRIVATE "${sdspi_private_dir}")
+        endif()
+    endif()
 endif()
 
 # Workaround for ESP-IDF v5.5 LVGL component missing the FATFS dependency
